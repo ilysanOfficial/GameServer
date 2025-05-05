@@ -153,7 +153,7 @@ namespace LeagueSandbox.GameServer
             _packetServer = server;
             // TODO: switch the notifier with ResponseHandler
             PacketNotifier = new PacketNotifier(_packetServer.PacketHandlerManager, Map.NavigationGrid);
-
+            
             ObjectManager = new ObjectManager(this);
             ProtectionManager = new ProtectionManager(this);
             ApiGameEvents.SetGame(this);

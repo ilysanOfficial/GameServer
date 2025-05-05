@@ -5,6 +5,9 @@ using System;
 using Channel = GameServerCore.Packets.Enums.Channel;
 using Version = LENet.Version;
 using LeagueSandbox.GameServer;
+using System.Diagnostics;
+using LeagueSandbox.GameServer.Logging;
+using log4net;
 
 namespace PacketDefinitions420
 {
@@ -13,6 +16,8 @@ namespace PacketDefinitions420
     /// </summary>
     public class PacketServer
     {
+        private static ILog _logger = LoggerProvider.GetLogger();
+
         private Host _server;
         private readonly uint _serverHost = Address.Any;
         private Game _game;
@@ -60,30 +65,48 @@ namespace PacketDefinitions420
         public void NetLoop(uint timeout = 0)
         {
             var enetEvent = new Event();
-            while (_server.HostService(enetEvent, timeout) > 0)
+            var stopwatch = Stopwatch.StartNew(); // 记录起始时间
+            long remaining = (int)timeout;
+
+            while (remaining > 0)
             {
-                switch (enetEvent.Type)
+                int result = _server.HostService(enetEvent, (uint)remaining);
+                if (result < 0) 
+                    break; // 出错时退出
+                else if(result==0)
                 {
-                    case EventType.CONNECT:
-                        {
-                            // Set some defaults
-                            enetEvent.Peer.MTU = PEER_MTU;
-                            enetEvent.Data = 0;
-                        }
-                        break;
-                    case EventType.RECEIVE:
-                        {
-                            var channel = (Channel)enetEvent.ChannelID;
-                            PacketHandlerManager.HandlePacket(enetEvent.Peer, enetEvent.Packet, channel);
-                            // Clean up the packet now that we're done using it.
-                            //enetEvent.Packet.Dispose();
-                        }
-                        break;
-                    case EventType.DISCONNECT:
-                        {
-                            PacketHandlerManager.HandleDisconnect(enetEvent.Peer);
-                        }
-                        break;
+                    var elapsed = (uint)stopwatch.ElapsedMilliseconds;
+                    remaining = (int)timeout - elapsed;
+                }
+                else
+                {
+                    // 处理事件...
+                    switch (enetEvent.Type)
+                    {
+                        case EventType.CONNECT:
+                            {
+                                // Set some defaults
+                                enetEvent.Peer.MTU = PEER_MTU;
+                                enetEvent.Data = 0;
+                            }
+                            break;
+                        case EventType.RECEIVE:
+                            {
+                                var channel = (Channel)enetEvent.ChannelID;
+                                PacketHandlerManager.HandlePacket(enetEvent.Peer, enetEvent.Packet, channel);
+                                // Clean up the packet now that we're done using it.
+                                //enetEvent.Packet.Dispose();
+                            }
+                            break;
+                        case EventType.DISCONNECT:
+                            {
+                                PacketHandlerManager.HandleDisconnect(enetEvent.Peer);
+                            }
+                            break;
+                    }
+
+                    var elapsed = (uint)stopwatch.ElapsedMilliseconds;
+                    remaining = (int)timeout - elapsed;
                 }
             }
         }

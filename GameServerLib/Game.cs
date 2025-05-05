@@ -36,7 +36,7 @@ namespace LeagueSandbox.GameServer
         // Function Vars
         private static ILog _logger = LoggerProvider.GetLogger();
         private float _nextSyncTime = 10 * 1000;
-        protected const double REFRESH_RATE = 1000.0 / 60.0; // GameLoop called 60 times a second.
+        protected const double REFRESH_RATE = 1000.0 / 30.0; // GameLoop called 60 times a second.
         private HandleStartGame _gameStartHandler;
 
         // Server
@@ -322,6 +322,7 @@ namespace LeagueSandbox.GameServer
             while (!SetToExit)
             {
                 double lastSleepDuration = lastMapDurationWatch.Elapsed.TotalMilliseconds;
+                //_logger.Info(lastSleepDuration);
                 lastMapDurationWatch.Restart();
                 
                 float deltaTime = (float)lastSleepDuration;
@@ -381,10 +382,13 @@ namespace LeagueSandbox.GameServer
                 }
 
                 double lastUpdateDuration = lastMapDurationWatch.Elapsed.TotalMilliseconds;
-                double oversleep = lastSleepDuration - timeout;
-                timeout = Math.Max(0, refreshRate - lastUpdateDuration - oversleep);
-                
+                double exceed = Math.Max(0.0, lastSleepDuration - refreshRate);
+                timeout = Math.Max(0, refreshRate - lastUpdateDuration - exceed);
+
+                var stopwatch = Stopwatch.StartNew();
                 _packetServer.NetLoop((uint)timeout);
+                double duration = stopwatch.Elapsed.TotalMilliseconds;
+                //_logger.Info(timeout + " " + duration);
             }
         }
 

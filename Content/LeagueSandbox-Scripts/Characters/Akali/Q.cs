@@ -1,3 +1,6 @@
+
+
+using System.Numerics;
 using GameServerCore.Enums;
 using static LeagueSandbox.GameServer.API.ApiFunctionManager;
 using LeagueSandbox.GameServer.Scripting.CSharp;
@@ -29,15 +32,19 @@ namespace Spells
             ApiEventManager.OnSpellHit.AddListener(this, spell, TargetExecute, false);
         }
 
+
         public void TargetExecute(Spell spell, AttackableUnit target, SpellMissile missile, SpellSector sector)
         {
             var owner = spell.CastInfo.Owner;
             var AP = owner.Stats.AbilityPower.Total * 0.4f;
             var damage = 15f + spell.CastInfo.SpellLevel * 20f + AP;
-            
+
             target.TakeDamage(owner, damage, DamageType.DAMAGE_TYPE_MAGICAL, DamageSource.DAMAGE_SOURCE_ATTACK, false);
             AddBuff("AkaliMota", 6f, 1, spell, target, owner);
+            AddBuff("AkaliMotaImpact", 6f, 1, spell, owner, owner);
             missile.SetToRemove();
         }
+
+
     }
 }

@@ -1,3 +1,4 @@
+
 using GameServerCore.Scripting.CSharp;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
 using LeagueSandbox.GameServer.GameObjects.SpellNS;
@@ -11,6 +12,14 @@ namespace CharScripts
             var bonusAd = owner.Stats.AttackDamage.Total - owner.Stats.AttackDamage.BaseValue;
             owner.Stats.SpellVamp.PercentBonus = 6 + bonusAd % 6;
         }
+        public void OnDeactivate(ObjAIBase owner, Spell spell = null)
+        {
+        }
+        public void OnUpdate(float diff)
+        {
+        }
     }
 }
+
+
 

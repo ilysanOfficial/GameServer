@@ -45,7 +45,7 @@ namespace LeagueSandbox.GameServer.Handlers
         public void Update(float diff)
         {
             // TODO: Verify if this is the proper time between path updates.
-            if (pathUpdateTimer >= 3000.0f)
+            if (pathUpdateTimer >= 1000.0f)
             {
                 // we iterate over a copy of _pathfinders because the original gets modified
                 var objectsCopy = new List<AttackableUnit>(_pathfinders);

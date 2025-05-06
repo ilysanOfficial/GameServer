@@ -293,7 +293,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 }
 
                 // only time we would collide with terrain is if we are inside of it, so we should teleport out of it.
-                Vector2 exit = _game.Map.NavigationGrid.GetClosestTerrainExit(Position, PathfindingRadius + 1.0f);
+                Vector2 exit = _game.Map.NavigationGrid.GetClosestTerrainExit(Position, PathfindingRadius);
                 SetPosition(exit, false);
             }
             else
@@ -309,10 +309,10 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
                 // We should not teleport here because Pathfinding should handle it.
                 // TODO: Implement a PathfindingHandler, and remove currently implemented manual pathfinding.
-                Vector2 exit = Extensions.GetCircleEscapePoint(Position, PathfindingRadius + 1, collider.Position, collider.PathfindingRadius);
+                Vector2 exit = Extensions.GetCircleEscapePoint(Position, PathfindingRadius, collider.Position, collider.PathfindingRadius);
                 if (!_game.Map.PathingHandler.IsWalkable(exit, PathfindingRadius))
                 {
-                    exit = _game.Map.NavigationGrid.GetClosestTerrainExit(exit, PathfindingRadius + 1.0f);
+                    exit = _game.Map.NavigationGrid.GetClosestTerrainExit(exit, PathfindingRadius);
                 }
                 SetPosition(exit, false);
             }

@@ -352,10 +352,8 @@ namespace GameServerCore
         /// <returns></returns>
         public static Vector2 GetCircleEscapePoint(Vector2 p1, float r1, Vector2 p2, float r2)
         {
-            Vector2 edgepoint1 = GetClosestCircleEdgePoint(p2, p1, r1);
-            Vector2 edgepoint2 = GetClosestCircleEdgePoint(p1, p2, r2);
-
-            return Vector2.Add(p1, Vector2.Subtract(edgepoint2, edgepoint1));
+            Vector2 direction = Vector2.Normalize(p1 - p2);
+            return Vector2.Add(p1, direction*(r1+r2-(p1-p2).Length()));
         }
 
         /// <summary>

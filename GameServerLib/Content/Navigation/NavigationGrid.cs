@@ -879,19 +879,20 @@ namespace LeagueSandbox.GameServer.Content.Navigation
         public Vector2 GetClosestTerrainExit(Vector2 location, float distanceThreshold = 0)
         {
             double angle = Math.PI / 4;
+            Vector2 cur = location;
 
             // x = r * cos(angle)
             // y = r * sin(angle)
             // r = distance from center
             // Draws spirals until it finds a walkable spot
-            for (int r = 1; !IsWalkable(location, distanceThreshold); r++)
+            for (int r = 1; !IsWalkable(cur, distanceThreshold); r++)
             {
-                location.X += r * (float)Math.Cos(angle);
-                location.Y += r * (float)Math.Sin(angle);
+                cur.X = r * (float)Math.Cos(angle) + location.X;
+                cur.Y = r * (float)Math.Sin(angle) + location.Y;
                 angle += Math.PI / 4;
             }
 
-            return location;
+            return cur;
         }
 
         public NavigationGridCell GetClosestWalkableCell(Vector2 coords, float distanceThreshold = 0, bool translate = true)

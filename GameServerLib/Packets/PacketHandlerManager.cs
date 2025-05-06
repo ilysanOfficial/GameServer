@@ -228,7 +228,7 @@ namespace PacketDefinitions420
             if (channelId == Channel.CHL_COMMUNICATION || channelId == Channel.CHL_LOADING_SCREEN)
             {
                 var loadScreenPacketId = (LoadScreenPacketID)reader.ReadByte();
-                //Console.WriteLine($"-> {loadScreenPacketId}");
+                _logger.Info($"-> {loadScreenPacketId}");
                 convertor = GetConvertor(loadScreenPacketId);
             }
             else

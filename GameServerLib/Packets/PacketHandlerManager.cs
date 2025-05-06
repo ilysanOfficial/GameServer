@@ -12,6 +12,8 @@ using Channel = GameServerCore.Packets.Enums.Channel;
 using LeagueSandbox.GameServer.GameObjects;
 using LeagueSandbox.GameServer.Players;
 using LeagueSandbox.GameServer;
+using LeagueSandbox.GameServer.Logging;
+using log4net;
 
 namespace PacketDefinitions420
 {
@@ -21,6 +23,8 @@ namespace PacketDefinitions420
     /// </summary>
     public class PacketHandlerManager
     {
+        private static ILog _logger = LoggerProvider.GetLogger();
+
         private delegate ICoreRequest RequestConvertor(byte[] data);
         private readonly Dictionary<Tuple<GamePacketID, Channel>, RequestConvertor> _gameConvertorTable;
         private readonly Dictionary<LoadScreenPacketID, RequestConvertor> _loadScreenConvertorTable;
@@ -148,6 +152,7 @@ namespace PacketDefinitions420
 
         public bool SendPacket(int userId, byte[] source, Channel channelNo, PacketFlags flag = PacketFlags.RELIABLE)
         {
+            _logger.Debug("SEND PACKET "+ BitConverter.ToString(source) + " "+channelNo+" "+flag);
             // Sometimes we try to send packets to a user that doesn't exist (like in broadcast when not all players are connected).
             if (0 <= userId && userId < _peers.Length && _peers[userId] != null)
             {
@@ -222,23 +227,27 @@ namespace PacketDefinitions420
 
         public bool HandlePacket(Peer peer, byte[] data, Channel channelId)
         {
+            _logger.Debug("HANDLE PACKET " + BitConverter.ToString(data));
+
             var reader = new BinaryReader(new MemoryStream(data));
             RequestConvertor convertor;
 
             if (channelId == Channel.CHL_COMMUNICATION || channelId == Channel.CHL_LOADING_SCREEN)
             {
                 var loadScreenPacketId = (LoadScreenPacketID)reader.ReadByte();
-                _logger.Info($"-> {loadScreenPacketId}");
+                _logger.Debug($"-> {loadScreenPacketId}");
                 convertor = GetConvertor(loadScreenPacketId);
             }
             else
             {
                 var gamePacketId = (GamePacketID)reader.ReadByte();
-                //Console.WriteLine($"-> {gamePacketId}");
+                _logger.Debug($"-> {gamePacketId}");
                 convertor = GetConvertor(gamePacketId, channelId);
             }
 
             reader.Close();
+
+            _logger.Debug(convertor);
 
             if (convertor != null)
             {
@@ -314,6 +323,7 @@ namespace PacketDefinitions420
 
         private bool HandleHandshake(Peer peer, byte[] data)
         {
+            _logger.Debug("HANDLE SHAKEHAKE " + BitConverter.ToString(data));
             var request = PacketReader.ReadKeyCheckRequest(data);
 
             var peerInfo = _playerManager.GetClientInfoByPlayerId(request.PlayerID);

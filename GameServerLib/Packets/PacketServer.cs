@@ -70,15 +70,8 @@ namespace PacketDefinitions420
 
             while (remaining > 0)
             {
-                int result = _server.HostService(enetEvent, (uint)remaining);
-                if (result < 0) 
-                    break; // 出错时退出
-                else if(result==0)
-                {
-                    var elapsed = (uint)stopwatch.ElapsedMilliseconds;
-                    remaining = (int)timeout - elapsed;
-                }
-                else
+                int result = _server.HostService(enetEvent, 0);
+                if (result > 0)
                 {
                     // 处理事件...
                     switch (enetEvent.Type)
@@ -104,10 +97,9 @@ namespace PacketDefinitions420
                             }
                             break;
                     }
-
-                    var elapsed = (uint)stopwatch.ElapsedMilliseconds;
-                    remaining = (int)timeout - elapsed;
                 }
+                var elapsed = (uint)stopwatch.ElapsedMilliseconds;
+                remaining = (int)timeout - elapsed;
             }
         }
     }

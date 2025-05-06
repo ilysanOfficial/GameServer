@@ -322,7 +322,7 @@ namespace LeagueSandbox.GameServer
             while (!SetToExit)
             {
                 double lastSleepDuration = lastMapDurationWatch.Elapsed.TotalMilliseconds;
-                //_logger.Info(lastSleepDuration);
+                _logger.Info(lastSleepDuration);
                 lastMapDurationWatch.Restart();
                 
                 float deltaTime = (float)lastSleepDuration;
@@ -384,11 +384,7 @@ namespace LeagueSandbox.GameServer
                 double lastUpdateDuration = lastMapDurationWatch.Elapsed.TotalMilliseconds;
                 double exceed = Math.Max(0.0, lastSleepDuration - refreshRate);
                 timeout = Math.Max(0, refreshRate - lastUpdateDuration - exceed);
-
-                var stopwatch = Stopwatch.StartNew();
                 _packetServer.NetLoop((uint)timeout);
-                double duration = stopwatch.Elapsed.TotalMilliseconds;
-                //_logger.Info(timeout + " " + duration);
             }
         }
 

@@ -17,6 +17,8 @@ using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
 using LeagueSandbox.GameServer.GameObjects.SpellNS.Missile;
 using LeagueSandbox.GameServer.GameObjects.SpellNS.Sector;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits.Buildings;
+using Extensions = GameServerCore.Extensions;
+using System.Activities.Presentation.View;
 
 namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 {
@@ -229,7 +231,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 }
                 else
                 {
-                    Waypoints[0] = Position;
+                    ResetWaypoints();
                 }
             }
         }
@@ -925,11 +927,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         /// TODO: Implement interpolation (assuming all other desync related issues are already fixed).
         public virtual bool Move(float delta)
         {
+            bool flag = false;
+            float speed = GetMoveSpeed() * 0.001f;
+            var maxDist = speed * delta;
             if (CurrentWaypointKey < Waypoints.Count)
             {
-                float speed = GetMoveSpeed() * 0.001f;
-                var maxDist = speed * delta;
-
                 while (true)
                 {
                     var dir = CurrentWaypoint - Position;
@@ -938,7 +940,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     if (maxDist < dist)
                     {
                         Position += dir / dist * maxDist;
-                        return true;
+                        flag = true;
+                        break;
                     }
                     else
                     {
@@ -948,12 +951,103 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                         CurrentWaypointKey++;
                         if (CurrentWaypointKey == Waypoints.Count || maxDist == 0)
                         {
-                            return true;
+                            flag = true;
+                            break;
                         }
                     }
                 }
             }
-            return false;
+
+            //if(flag)
+            //{
+            //    bool success = false;
+            //    Random rand = new Random();
+            //    for (int i = 0; i < 512; i++)
+            //    {
+            //        List<GameObject> list = _game.Map.CollisionHandler.GetNearestObjects(new Circle(Position, CollisionRadius));
+            //        list.AddRange(_game.Map.CollisionHandler.GetNearestObjectsInstant(new Circle(Position, CollisionRadius)));
+            //        if(list != null)
+            //        {
+            //            GameObject collider = null;
+            //            foreach (var obj in list)
+            //            {
+            //                if (obj == this)
+            //                    continue;
+            //                if (_game.Map.CollisionHandler.IsCollisionAffected(obj))
+            //                {
+            //                    collider = obj;
+            //                    break;
+            //                }
+            //            }
+            //            if (collider != null)
+            //            {
+            //                // 1. 生成随机角度（0 到 2π）
+            //                double theta = rand.NextDouble() * 2 * Math.PI;
+
+            //                // 2. 生成随机半径（平方根修正均匀性）
+            //                double r = Math.Sqrt(rand.NextDouble()) * maxDist;
+
+            //                // 3. 极坐标转笛卡尔坐标
+            //                float x = (float)(pre.X + r * Math.Cos(theta));
+            //                float y = (float)(pre.Y + r * Math.Sin(theta));
+
+            //                Vector2 exit = new Vector2(x, y);
+            //                if (!_game.Map.PathingHandler.IsWalkable(exit, PathfindingRadius))
+            //                {
+            //                    exit = _game.Map.NavigationGrid.GetClosestTerrainExit(exit, PathfindingRadius);
+            //                }
+            //                SetPosition(exit, false);
+            //            }
+            //            else
+            //            {
+            //                success = true;
+            //                break;
+            //            }
+            //        }
+            //        else
+            //        {
+            //            success = true;
+            //            break;
+            //        }
+            //    }
+            //    if (!success)
+            //        SetPosition(pre, false);
+            //    _game.Map.CollisionHandler.InsertQuadInstant(this);
+            //}
+
+            if (flag)
+            {
+                double angle = 0;
+                for (int r = 0; ; r++)
+                {
+                    Vector2 cur;
+                    cur.X = r * (float)Math.Cos(angle) + Position.X;
+                    cur.Y = r * (float)Math.Sin(angle) + Position.Y;
+                    angle += Math.PI / 4;
+
+                    List<GameObject> list = _game.Map.CollisionHandler.GetNearestObjects(new Circle(cur, CollisionRadius));
+                    list.AddRange(_game.Map.CollisionHandler.GetNearestObjectsInstant(new Circle(cur, CollisionRadius)));
+                    GameObject collider = null;
+                    foreach (var obj in list)
+                    {
+                        if (obj == this)
+                            continue;
+                        if (_game.Map.CollisionHandler.IsCollisionAffected(obj))
+                        {
+                            collider = obj;
+                            break;
+                        }
+                    }
+                    if (collider == null)
+                    {
+                        if(r > 0)
+                            SetPosition(cur, false);
+                        break;
+                    }
+                }
+                _game.Map.CollisionHandler.InsertQuadInstant(this);
+            }
+            return flag;
         }
 
         public bool PathTrueEndIs(Vector2 location)

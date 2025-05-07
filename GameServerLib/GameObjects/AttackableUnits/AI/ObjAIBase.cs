@@ -118,7 +118,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI
             }
             else
             {
-                PathfindingRadius = 40;
+                PathfindingRadius = CollisionRadius;
             }
 
             // TODO: Centralize this instead of letting it lay in the initialization.

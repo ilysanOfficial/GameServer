@@ -16,6 +16,7 @@ namespace LeagueSandbox.GameServer.Handlers
         private MapScriptHandler _map;
         private readonly List<GameObject> _objects = new List<GameObject>();
         private QuadTree<GameObject> _quadDynamic;
+        private QuadTree<GameObject> _quadInstant;
 
         public CollisionHandler(MapScriptHandler map)
         {
@@ -27,6 +28,13 @@ namespace LeagueSandbox.GameServer.Handlers
                 _map.NavigationGrid.MinGridPosition.X, // MIN
                 _map.NavigationGrid.MaxGridPosition.Z, // yep, MAX
                 _map.NavigationGrid.MaxGridPosition.X -_map.NavigationGrid.MinGridPosition.X,
+                _map.NavigationGrid.MaxGridPosition.Z - _map.NavigationGrid.MinGridPosition.Z
+            );
+
+            _quadInstant = new QuadTree<GameObject>(
+                _map.NavigationGrid.MinGridPosition.X, // MIN
+                _map.NavigationGrid.MaxGridPosition.Z, // yep, MAX
+                _map.NavigationGrid.MaxGridPosition.X - _map.NavigationGrid.MinGridPosition.X,
                 _map.NavigationGrid.MaxGridPosition.Z - _map.NavigationGrid.MinGridPosition.Z
             );
         }
@@ -49,7 +57,7 @@ namespace LeagueSandbox.GameServer.Handlers
         /// </summary>
         /// <param name="obj">GameObject to check.</param>
         /// <returns>True/False.</returns>
-        private bool IsCollisionAffected(GameObject obj)
+        public bool IsCollisionAffected(GameObject obj)
         {
             // Collision affected GameObjects are non-turret AI units, AttackableUnits, missiles, and pure GameObjects.
             return !(obj.IsToRemove() || obj is LevelProp || obj is Particle || obj is ObjBuilding || obj is BaseTurret);
@@ -168,6 +176,28 @@ namespace LeagueSandbox.GameServer.Handlers
                     _quadDynamic.Insert(obj, GetBounds(obj));
                 }
             }
+        }
+
+        public void ClearQuadInstant()
+        {
+            _quadInstant.Clear();
+        }
+
+        public void InsertQuadInstant(GameObject obj)
+        {
+            _quadInstant.Insert(obj, GetBounds(obj));
+        }
+
+        public List<GameObject> GetNearestObjectsInstant(Circle circle)
+        {
+            var nearest = new List<GameObject>();
+
+            foreach (var obj in _quadInstant.GetNodesInside(circle))
+            {
+                nearest.Add(obj);
+            }
+
+            return nearest;
         }
     }
 }

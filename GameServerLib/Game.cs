@@ -322,7 +322,7 @@ namespace LeagueSandbox.GameServer
             while (!SetToExit)
             {
                 double lastSleepDuration = lastMapDurationWatch.Elapsed.TotalMilliseconds;
-                _logger.Info(lastSleepDuration);
+                //_logger.Info(lastSleepDuration);
                 lastMapDurationWatch.Restart();
                 
                 float deltaTime = (float)lastSleepDuration;

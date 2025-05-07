@@ -152,7 +152,7 @@ namespace PacketDefinitions420
 
         public bool SendPacket(int userId, byte[] source, Channel channelNo, PacketFlags flag = PacketFlags.RELIABLE)
         {
-            _logger.Debug("SEND PACKET "+ BitConverter.ToString(source) + " "+channelNo+" "+flag);
+            //_logger.Debug("SEND PACKET "+ BitConverter.ToString(source) + " "+channelNo+" "+flag);
             // Sometimes we try to send packets to a user that doesn't exist (like in broadcast when not all players are connected).
             if (0 <= userId && userId < _peers.Length && _peers[userId] != null)
             {
@@ -227,7 +227,7 @@ namespace PacketDefinitions420
 
         public bool HandlePacket(Peer peer, byte[] data, Channel channelId)
         {
-            _logger.Debug("HANDLE PACKET " + BitConverter.ToString(data));
+            //_logger.Debug("HANDLE PACKET " + BitConverter.ToString(data));
 
             var reader = new BinaryReader(new MemoryStream(data));
             RequestConvertor convertor;
@@ -235,19 +235,19 @@ namespace PacketDefinitions420
             if (channelId == Channel.CHL_COMMUNICATION || channelId == Channel.CHL_LOADING_SCREEN)
             {
                 var loadScreenPacketId = (LoadScreenPacketID)reader.ReadByte();
-                _logger.Debug($"-> {loadScreenPacketId}");
+                //_logger.Debug($"-> {loadScreenPacketId}");
                 convertor = GetConvertor(loadScreenPacketId);
             }
             else
             {
                 var gamePacketId = (GamePacketID)reader.ReadByte();
-                _logger.Debug($"-> {gamePacketId}");
+                //_logger.Debug($"-> {gamePacketId}");
                 convertor = GetConvertor(gamePacketId, channelId);
             }
 
             reader.Close();
 
-            _logger.Debug(convertor);
+            //_logger.Debug(convertor);
 
             if (convertor != null)
             {
@@ -323,7 +323,7 @@ namespace PacketDefinitions420
 
         private bool HandleHandshake(Peer peer, byte[] data)
         {
-            _logger.Debug("HANDLE SHAKEHAKE " + BitConverter.ToString(data));
+            //_logger.Debug("HANDLE SHAKEHAKE " + BitConverter.ToString(data));
             var request = PacketReader.ReadKeyCheckRequest(data);
 
             var peerInfo = _playerManager.GetClientInfoByPlayerId(request.PlayerID);

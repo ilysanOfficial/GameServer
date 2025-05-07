@@ -229,9 +229,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                         ResetWaypoints();
                     }
                 }
-                else
-                {
-                    ResetWaypoints();
                 }
             }
         }

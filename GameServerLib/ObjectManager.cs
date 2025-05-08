@@ -74,8 +74,6 @@ namespace LeagueSandbox.GameServer
         {
             _currentlyInUpdate = true;
 
-            _game.Map.CollisionHandler.ClearQuadInstant();
-
             // For all existing objects
             foreach (var obj in _objects.Values)
             {

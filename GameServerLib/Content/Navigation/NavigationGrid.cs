@@ -9,6 +9,12 @@ using GameServerCore.Enums;
 using LeagueSandbox.GameServer.GameObjects;
 using System.Linq;
 using GameMaths;
+using LeagueSandbox.GameServer.GameObjects.AttackableUnits;
+using System.Activities.Presentation.View;
+using System.Runtime.ConstrainedExecution;
+using System.Xml.Linq;
+using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
+using Extensions = GameServerCore.Extensions;
 
 namespace LeagueSandbox.GameServer.Content.Navigation
 {
@@ -178,7 +184,7 @@ namespace LeagueSandbox.GameServer.Content.Navigation
         /// <param name="to">Point that the path ends at.</param>
         /// <param name="distanceThreshold">Amount of distance away from terrain that the path should be.</param>
         /// <returns>List of points forming a path in order: from -> to</returns>
-        public List<Vector2> GetPath(Vector2 from, Vector2 to, float distanceThreshold = 0)
+        public List<Vector2> GetPath(GameObject obj, Vector2 from, Vector2 to, float distanceThreshold = 0)
         {
             if(from == to)
             {
@@ -241,6 +247,8 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                         continue;
                     }
 
+                    float punish = 0;
+
                     Vector2 neighborCellCoord = toNav;
                     // The target point is always walkable,
                     // we made sure of this at the beginning of the function
@@ -263,6 +271,37 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                             closedList.Add(neighborCell.ID);
                             continue;
                         }
+
+                        if(obj != null)
+                        {
+                            if (obj is AttackableUnit)
+                            {
+                                if (((AttackableUnit)obj).MovementParameters != null || ((AttackableUnit)obj).Status.HasFlag(StatusFlags.Ghosted))
+                                {
+
+                                }
+                                else
+                                {
+                                    List<GameObject> list = obj._game.Map.CollisionHandler.GetNearestObjects(new Circle(TranslateFromNavGrid(neighborCell.Locator), obj.CollisionRadius));
+                                    foreach (GameObject unit in list)
+                                    {
+                                        if (unit == obj)
+                                            continue;
+                                        if (!obj._game.Map.CollisionHandler.IsCollisionAffected(unit) && unit is not BaseTurret)
+                                            continue;
+                                        if (unit is AttackableUnit)
+                                        {
+                                            if (((AttackableUnit)unit).MovementParameters != null || ((AttackableUnit)unit).Status.HasFlag(StatusFlags.Ghosted))
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        punish = 2 * unit.CollisionRadius;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // calculate the new path and cost +heuristic and add to the priority queue
@@ -276,7 +315,8 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                     // add 1 for every cell used
                     float cost = currentCost + 1
                         + neighborCell.ArrivalCost
-                        + neighborCell.AdditionalCost;
+                        + neighborCell.AdditionalCost
+                        + punish;
                     
                     priorityQueue.Enqueue(
                         (npath, cost), cost

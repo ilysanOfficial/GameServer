@@ -55,7 +55,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
                             {
                                 var ithWaypoint = waypoints[i];
                                 var lastWaypoint = waypoints[waypoints.Count - 1];
-                                var path = nav.GetPath(ithWaypoint, lastWaypoint, champion.PathfindingRadius);
+                                var path = nav.GetPath(champion, ithWaypoint, lastWaypoint, champion.PathfindingRadius);
                                 waypoints.RemoveRange(i, waypoints.Count - i);
                                 if(path != null)
                                 {
@@ -77,7 +77,7 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
                     case OrderType.PetHardReturn:
                         if (pet != null)
                         {
-                            waypoints = nav.GetPath(pet.Position, req.Position, pet.PathfindingRadius);
+                            waypoints = nav.GetPath(pet, pet.Position, req.Position, pet.PathfindingRadius);
                             if (waypoints == null)
                             {
                                 return false;

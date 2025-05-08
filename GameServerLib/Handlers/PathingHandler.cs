@@ -1,8 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Numerics;
-using GameServerCore;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits;
+using LeagueSandbox.GameServer.Logging;
+using log4net;
 
 namespace LeagueSandbox.GameServer.Handlers
 {
@@ -123,9 +123,9 @@ namespace LeagueSandbox.GameServer.Handlers
         {
             if (usePathingRadius)
             {
-                return GetPath(obj.Position, target, obj.PathfindingRadius);
+                return _map.NavigationGrid.GetPath(obj, obj.Position, target, obj.PathfindingRadius);
             }
-            return GetPath(obj.Position, target, 0);
+            return _map.NavigationGrid.GetPath(obj, obj.Position, target, 0);
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace LeagueSandbox.GameServer.Handlers
         /// </summary>
         public List<Vector2> GetPath(Vector2 start, Vector2 target, float checkRadius = 0)
         {
-            return _map.NavigationGrid.GetPath(start, target, checkRadius);
+            return _map.NavigationGrid.GetPath(null, start, target, checkRadius);
         }
     }
 }

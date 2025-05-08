@@ -397,9 +397,17 @@ namespace LeagueSandbox.GameServer
             // This section dictates the priority of updates.
             GameTime += diff;
             // Collision
+            var watch = new Stopwatch();
+            watch.Start();
             Map.Update(diff);
+            watch.Stop();
+            //_logger.Info("MAP UPDATE: " + watch.ElapsedMilliseconds);
+            watch.Reset();
+            watch.Start();
             // Objects
             ObjectManager.Update(diff);
+            watch.Stop();
+            //_logger.Info("OBJECT UPDATE: " + watch.ElapsedMilliseconds);
             // Protection (TODO: Move this into ObjectManager).
             ProtectionManager.Update(diff);
             ChatCommandManager.GetCommands().ForEach(command => command.Update(diff));

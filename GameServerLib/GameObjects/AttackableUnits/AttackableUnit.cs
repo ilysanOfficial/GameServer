@@ -124,7 +124,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         public AttackableUnit(
             Game game,
             string model,
-            int collisionRadius = 40,
+            float collisionRadius = 40,
             Vector2 position = new Vector2(),
             int visionRadius = 0,
             uint netId = 0,
@@ -215,7 +215,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 if (repath)
                 {
                     Vector2 safeExit = _game.Map.NavigationGrid.GetClosestTerrainExit(Waypoints.Last(), PathfindingRadius);
-                    List<Vector2> safePath = _game.Map.PathingHandler.GetPath(Position, safeExit, PathfindingRadius);
+                    List<Vector2> safePath = _game.Map.PathingHandler.GetPath(this, safeExit, true);
 
                     // TODO: When using this safePath, sometimes we collide with the terrain again, so we use an unsafe path the next collision, however,
                     // sometimes we collide again before we can finish the unsafe path, so we end up looping collisions between safe and unsafe paths, never actually escaping (ex: sharp corners).
@@ -228,7 +228,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     {
                         ResetWaypoints();
                     }
-                }
                 }
             }
         }
@@ -308,12 +307,32 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
                 // We should not teleport here because Pathfinding should handle it.
                 // TODO: Implement a PathfindingHandler, and remove currently implemented manual pathfinding.
-                Vector2 exit = Extensions.GetCircleEscapePoint(Position, PathfindingRadius, collider.Position, collider.PathfindingRadius);
-                if (!_game.Map.PathingHandler.IsWalkable(exit, PathfindingRadius))
+                double angle = 0;
+                for (float r = 1; ; r ++)
                 {
-                    exit = _game.Map.NavigationGrid.GetClosestTerrainExit(exit, PathfindingRadius);
+                    Vector2 cur;
+                    cur.X = r * (float)Math.Cos(angle) + Position.X;
+                    cur.Y = r * (float)Math.Sin(angle) + Position.Y;
+                    angle += Math.PI / 4;
+
+                    List<GameObject> list = _game.Map.CollisionHandler.GetNearestObjects(new Circle(cur, CollisionRadius));
+                    GameObject o = null;
+                    foreach (var obj in list)
+                    {
+                        if (obj == this)
+                            continue;
+                        if (_game.Map.CollisionHandler.IsCollisionAffected(obj) || obj is BaseTurret)
+                        {
+                            o = obj;
+                            break;
+                        }
+                    }
+                    if (o == null && _game.Map.PathingHandler.IsWalkable(cur, PathfindingRadius))
+                    {
+                        SetPosition(cur, true);
+                        break;
+                    }
                 }
-                SetPosition(exit, false);
             }
         }
 
@@ -955,67 +974,11 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                 }
             }
 
-            //if(flag)
-            //{
-            //    bool success = false;
-            //    Random rand = new Random();
-            //    for (int i = 0; i < 512; i++)
-            //    {
-            //        List<GameObject> list = _game.Map.CollisionHandler.GetNearestObjects(new Circle(Position, CollisionRadius));
-            //        list.AddRange(_game.Map.CollisionHandler.GetNearestObjectsInstant(new Circle(Position, CollisionRadius)));
-            //        if(list != null)
-            //        {
-            //            GameObject collider = null;
-            //            foreach (var obj in list)
-            //            {
-            //                if (obj == this)
-            //                    continue;
-            //                if (_game.Map.CollisionHandler.IsCollisionAffected(obj))
-            //                {
-            //                    collider = obj;
-            //                    break;
-            //                }
-            //            }
-            //            if (collider != null)
-            //            {
-            //                // 1. 生成随机角度（0 到 2π）
-            //                double theta = rand.NextDouble() * 2 * Math.PI;
-
-            //                // 2. 生成随机半径（平方根修正均匀性）
-            //                double r = Math.Sqrt(rand.NextDouble()) * maxDist;
-
-            //                // 3. 极坐标转笛卡尔坐标
-            //                float x = (float)(pre.X + r * Math.Cos(theta));
-            //                float y = (float)(pre.Y + r * Math.Sin(theta));
-
-            //                Vector2 exit = new Vector2(x, y);
-            //                if (!_game.Map.PathingHandler.IsWalkable(exit, PathfindingRadius))
-            //                {
-            //                    exit = _game.Map.NavigationGrid.GetClosestTerrainExit(exit, PathfindingRadius);
-            //                }
-            //                SetPosition(exit, false);
-            //            }
-            //            else
-            //            {
-            //                success = true;
-            //                break;
-            //            }
-            //        }
-            //        else
-            //        {
-            //            success = true;
-            //            break;
-            //        }
-            //    }
-            //    if (!success)
-            //        SetPosition(pre, false);
-            //    _game.Map.CollisionHandler.InsertQuadInstant(this);
-            //}
-
             if (flag)
             {
                 double angle = 0;
-                for (int r = 0; ; r++)
+                bool isFirst = true;
+                for (float r = 0; ; r ++, isFirst = false)
                 {
                     Vector2 cur;
                     cur.X = r * (float)Math.Cos(angle) + Position.X;
@@ -1023,26 +986,24 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     angle += Math.PI / 4;
 
                     List<GameObject> list = _game.Map.CollisionHandler.GetNearestObjects(new Circle(cur, CollisionRadius));
-                    list.AddRange(_game.Map.CollisionHandler.GetNearestObjectsInstant(new Circle(cur, CollisionRadius)));
                     GameObject collider = null;
                     foreach (var obj in list)
                     {
                         if (obj == this)
                             continue;
-                        if (_game.Map.CollisionHandler.IsCollisionAffected(obj))
+                        if (_game.Map.CollisionHandler.IsCollisionAffected(obj) || obj is BaseTurret)
                         {
                             collider = obj;
                             break;
                         }
                     }
-                    if (collider == null)
+                    if (collider == null && _game.Map.PathingHandler.IsWalkable(cur, PathfindingRadius))
                     {
-                        if(r > 0)
-                            SetPosition(cur, false);
+                        if (!isFirst)
+                            SetPosition(cur, true);
                         break;
                     }
                 }
-                _game.Map.CollisionHandler.InsertQuadInstant(this);
             }
             return flag;
         }
@@ -1065,7 +1026,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
             if (CanChangeWaypoints())
             {
                 var nav = _game.Map.NavigationGrid;
-                var path = nav.GetPath(Position, location, PathfindingRadius);
+                var path = nav.GetPath(this, Position, location, PathfindingRadius);
                 if (path != null)
                 {
                     SetWaypoints(path); // resets `PathHasTrueEnd`

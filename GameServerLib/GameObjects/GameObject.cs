@@ -15,7 +15,7 @@ namespace LeagueSandbox.GameServer.GameObjects
     public class GameObject
     {
         // Crucial Vars (keep in mind Game is everywhere, which could be an issue for the future)
-        protected Game _game;
+        public Game _game;
         protected NetworkIdManager _networkIdManager;
 
         // Function Vars

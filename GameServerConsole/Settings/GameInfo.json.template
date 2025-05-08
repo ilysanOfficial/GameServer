@@ -72,10 +72,10 @@
         "dataPackage": "LeagueSandbox-Scripts"
     },
     "gameInfo": {
-        "MANACOSTS_ENABLED": false,
-        "COOLDOWNS_ENABLED": false,
-        "CHEATS_ENABLED": true,
-        "MINION_SPAWNS_ENABLED": false,
+        "MANACOSTS_ENABLED": true,
+        "COOLDOWNS_ENABLED": true,
+        "CHEATS_ENABLED": false,
+        "MINION_SPAWNS_ENABLED": true,
         "CONTENT_PATH": "../../../../../Content",
         "IS_DAMAGE_TEXT_GLOBAL": false
     },

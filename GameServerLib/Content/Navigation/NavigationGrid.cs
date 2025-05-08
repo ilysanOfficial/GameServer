@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using GameServerCore;
 using Vector2 = System.Numerics.Vector2;
 using System.Numerics;
 using GameServerLib.Extensions;
@@ -11,15 +10,16 @@ using System.Linq;
 using GameMaths;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits;
 using System.Activities.Presentation.View;
-using System.Runtime.ConstrainedExecution;
-using System.Xml.Linq;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits.AI;
 using Extensions = GameServerCore.Extensions;
+using LeagueSandbox.GameServer.Logging;
+using log4net;
 
 namespace LeagueSandbox.GameServer.Content.Navigation
 {
     public class NavigationGrid
     {
+        private static ILog _logger = LoggerProvider.GetLogger();
         /// <summary>
         /// The minimum position on the NavigationGrid in normal coordinate space (bottom left in 2D).
         /// NavigationGridCells are undefined below these minimums.
@@ -98,6 +98,8 @@ namespace LeagueSandbox.GameServer.Content.Navigation
         /// Center of the map in normal coordinate space.
         /// </summary>
         public Vector2 MiddleOfMap { get; private set; }
+
+        private Dictionary<int, List<NavigationGridCell>> neighborCache = new Dictionary<int, List<NavigationGridCell>>();
 
         public NavigationGrid(string fileLocation) : this(File.OpenRead(fileLocation)) { }
         public NavigationGrid(byte[] buffer) : this(new MemoryStream(buffer)) { }
@@ -208,16 +210,18 @@ namespace LeagueSandbox.GameServer.Content.Navigation
             }
 
             // A size large enough not to relocate the array while playing Summoner's Rift
-            var priorityQueue = new PriorityQueue<(List<NavigationGridCell>, float), float>(1024);
-            
-            var start = new List<NavigationGridCell>(1);
-            start.Add(cellFrom);
-            priorityQueue.Enqueue((start, 0), Vector2.Distance(fromNav, toNav));
+            var priorityQueue = new PriorityQueue<(NavigationGridCell, float), float>(100000);
+            priorityQueue.Enqueue((cellFrom, 0), 0);
 
             var closedList = new HashSet<int>();
-            closedList.Add(cellFrom.ID);
 
-            List<NavigationGridCell> path = null;
+            Dictionary<int, float> costMap = new Dictionary<int, float>();
+            costMap[cellFrom.ID] = 0;
+
+            Dictionary<int, NavigationGridCell> preMap = new Dictionary<int, NavigationGridCell>();
+            preMap[cellFrom.ID] = null;
+
+            Dictionary<int, float> punishMap = new Dictionary<int, float>();
 
             // while there are still paths to explore
             while (true)
@@ -229,9 +233,10 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                 }
 
                 float currentCost = element.Item2;
-                path = element.Item1;
-
-                NavigationGridCell cell = path[path.Count - 1];
+                NavigationGridCell cell = element.Item1;
+                if (closedList.Contains(cell.ID))
+                    continue;
+                closedList.Add(cell.ID);
 
                 // found the min solution and return it (path)
                 if (cell.ID == cellTo.ID)
@@ -272,7 +277,7 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                             continue;
                         }
 
-                        if(obj != null)
+                        if (obj != null && currentCost < 2 * distanceThreshold)
                         {
                             if (obj is AttackableUnit)
                             {
@@ -282,62 +287,84 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                                 }
                                 else
                                 {
-                                    List<GameObject> list = obj._game.Map.CollisionHandler.GetNearestObjects(new Circle(TranslateFromNavGrid(neighborCell.Locator), obj.CollisionRadius));
-                                    foreach (GameObject unit in list)
+                                    if (punishMap.ContainsKey(neighborCell.ID))
                                     {
-                                        if (unit == obj)
-                                            continue;
-                                        if (!obj._game.Map.CollisionHandler.IsCollisionAffected(unit) && unit is not BaseTurret)
-                                            continue;
-                                        if (unit is AttackableUnit)
+                                        punish = punishMap[neighborCell.ID];
+                                    }
+                                    else
+                                    {
+                                        List<GameObject> list = obj._game.Map.CollisionHandler.GetNearestObjects(new Circle(TranslateFromNavGrid(neighborCell.Locator), distanceThreshold));
+                                        float mx = 0;
+                                        foreach (GameObject unit in list)
                                         {
-                                            if (((AttackableUnit)unit).MovementParameters != null || ((AttackableUnit)unit).Status.HasFlag(StatusFlags.Ghosted))
-                                            {
+                                            if (unit == obj)
                                                 continue;
+                                            if (!obj._game.Map.CollisionHandler.IsCollisionAffected(unit) && unit is not BaseTurret)
+                                                continue;
+                                            if (unit is AttackableUnit)
+                                            {
+                                                if (((AttackableUnit)unit).MovementParameters != null || ((AttackableUnit)unit).Status.HasFlag(StatusFlags.Ghosted))
+                                                {
+                                                    continue;
+                                                }
                                             }
+                                            mx = Math.Max(mx, 2 * unit.CollisionRadius);
                                         }
-                                        punish = 2 * unit.CollisionRadius;
-                                        break;
+                                        punish = mx;
+                                        punishMap[neighborCell.ID] = punish;
                                     }
                                 }
                             }
                         }
                     }
 
-                    // calculate the new path and cost +heuristic and add to the priority queue
-                    var npath = new List<NavigationGridCell>(path.Count + 1);
-                    foreach(var pathCell in path)
-                    {
-                        npath.Add(pathCell);
-                    }
-                    npath.Add(neighborCell);
 
                     // add 1 for every cell used
-                    float cost = currentCost + 1
+                    float cost = currentCost
                         + neighborCell.ArrivalCost
                         + neighborCell.AdditionalCost
-                        + punish;
+                        + punish
+                        + Vector2.Distance(neighborCellCoord, toNav);
                     
                     priorityQueue.Enqueue(
-                        (npath, cost), cost
-                        + neighborCell.Heuristic
-                        + Vector2.Distance(neighborCellCoord, toNav)
+                        (neighborCell, cost), cost
                     );
 
-                    closedList.Add(neighborCell.ID);
+                    if (costMap.ContainsKey(neighborCell.ID))
+                    {
+                        if (cost < costMap[neighborCell.ID])
+                        {
+                            costMap[neighborCell.ID] = cost;
+                            preMap[neighborCell.ID] = cell;
+                        }
+                    }
+                    else
+                    {
+                        costMap[neighborCell.ID] = cost;
+                        preMap[neighborCell.ID] = cell;
+                    }
                 }
             }
 
-            // shouldn't happen usually
-            if (path == null)
+            List<NavigationGridCell> path = new List<NavigationGridCell> ();
+            NavigationGridCell cur = cellTo;
+            do
             {
-                return null;
+                path.Add(cur);
+                cur = preMap[cur.ID];
             }
+            while (cur != null);
+            path.Reverse();
 
-            SmoothPath(path, distanceThreshold);
+            // shouldn't happen usually
+            //if (path[0] != cellFrom || path[path.Count - 1] != cellTo)
+            //{
+            //    return null;
+            //}
+
+            SmoothPath(obj, path, distanceThreshold);
 
             var returnList = new List<Vector2>(path.Count);
-            
             returnList.Add(from);
             for (int i = 1; i < path.Count - 1; i++)
             {
@@ -353,7 +380,7 @@ namespace LeagueSandbox.GameServer.Content.Navigation
         /// Remove waypoints (cells) that have LOS from one to the other from path.
         /// </summary>
         /// <param name="path"></param>
-        private void SmoothPath(List<NavigationGridCell> path, float checkDistance = 0f)
+        private void SmoothPath(GameObject obj, List<NavigationGridCell> path, float checkDistance = 0f)
         {
             if(path.Count < 3)
             {
@@ -368,6 +395,42 @@ namespace LeagueSandbox.GameServer.Content.Navigation
                 {
                     // add previous.
                     path[++j] = path[i - 1];
+                }
+                else
+                {
+                    bool flag = false;
+                    if (obj != null && i < Math.Min(path.Count / 3, 5))
+                    {
+                        if (obj is AttackableUnit)
+                        {
+                            if (((AttackableUnit)obj).MovementParameters != null || ((AttackableUnit)obj).Status.HasFlag(StatusFlags.Ghosted))
+                            {
+
+                            }
+                            else
+                            {
+                                List<GameObject> list = obj._game.Map.CollisionHandler.GetNearestObjects(new Circle(TranslateFromNavGrid(path[i].Locator), checkDistance));
+                                foreach (GameObject unit in list)
+                                {
+                                    if (unit == obj)
+                                        continue;
+                                    if (!obj._game.Map.CollisionHandler.IsCollisionAffected(unit) && unit is not BaseTurret)
+                                        continue;
+                                    if (unit is AttackableUnit)
+                                    {
+                                        if (((AttackableUnit)unit).MovementParameters != null || ((AttackableUnit)unit).Status.HasFlag(StatusFlags.Ghosted))
+                                        {
+                                            continue;
+                                        }
+                                    }
+                                    flag = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (!flag)
+                        path[++j] = path[i - 1];
                 }
             }
             // Add last.
@@ -448,21 +511,25 @@ namespace LeagueSandbox.GameServer.Content.Navigation
         /// <returns>List of neighboring cells.</returns>
         private List<NavigationGridCell> GetCellNeighbors(NavigationGridCell cell)
         {
-            List<NavigationGridCell> neighbors = new List<NavigationGridCell>(9);
-            for (short dirY = -1; dirY <= 1; dirY++)
+            if (!neighborCache.ContainsKey(cell.ID))
             {
-                for (short dirX = -1; dirX <= 1; dirX++)
+                List<NavigationGridCell> neighbors = new List<NavigationGridCell>(9);
+                for (short dirY = -1; dirY <= 1; dirY++)
                 {
-                    short nx = (short)(cell.Locator.X + dirX);
-                    short ny = (short)(cell.Locator.Y + dirY);
-                    NavigationGridCell neighborCell = GetCell(nx, ny);
-                    if (neighborCell != null)
+                    for (short dirX = -1; dirX <= 1; dirX++)
                     {
-                        neighbors.Add(neighborCell);
+                        short nx = (short)(cell.Locator.X + dirX);
+                        short ny = (short)(cell.Locator.Y + dirY);
+                        NavigationGridCell neighborCell = GetCell(nx, ny);
+                        if (neighborCell != null)
+                        {
+                            neighbors.Add(neighborCell);
+                        }
                     }
                 }
+                neighborCache[cell.ID] = neighbors;
             }
-            return neighbors;
+            return neighborCache[cell.ID];
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits;
 using LeagueSandbox.GameServer.Logging;
@@ -11,6 +12,8 @@ namespace LeagueSandbox.GameServer.Handlers
     /// </summary>
     public class PathingHandler
     {
+        private static ILog _logger = LoggerProvider.GetLogger();
+
         private MapScriptHandler _map;
         private readonly List<AttackableUnit> _pathfinders = new List<AttackableUnit>();
         private float pathUpdateTimer;
@@ -121,11 +124,7 @@ namespace LeagueSandbox.GameServer.Handlers
         /// </summary>
         public List<Vector2> GetPath(AttackableUnit obj, Vector2 target, bool usePathingRadius = true)
         {
-            if (usePathingRadius)
-            {
-                return _map.NavigationGrid.GetPath(obj, obj.Position, target, obj.PathfindingRadius);
-            }
-            return _map.NavigationGrid.GetPath(obj, obj.Position, target, 0);
+            return GetPath(obj, obj.Position, target, usePathingRadius);
         }
 
         /// <summary>
@@ -134,6 +133,25 @@ namespace LeagueSandbox.GameServer.Handlers
         public List<Vector2> GetPath(Vector2 start, Vector2 target, float checkRadius = 0)
         {
             return _map.NavigationGrid.GetPath(null, start, target, checkRadius);
+        }
+
+        /// <summary>
+        /// Returns a path to the given target position from the given unit's position.
+        /// </summary>
+        public List<Vector2> GetPath(AttackableUnit obj, Vector2 start, Vector2 target, bool usePathingRadius = true)
+        {
+            var watch = new Stopwatch();
+            if (usePathingRadius)
+            {
+                List<Vector2> list = _map.NavigationGrid.GetPath(obj, start, target, obj.PathfindingRadius);
+                //watch.Stop();
+                //if (true || watch.ElapsedMilliseconds > 10 || list == null)
+                //{
+                //    _logger.Info("GET PATH TOO SLOW: " + watch.ElapsedMilliseconds + " " + (list == null) + " " + list.Count);
+                //}
+                return list;
+            }
+            return _map.NavigationGrid.GetPath(obj, start, target, 0);
         }
     }
 }

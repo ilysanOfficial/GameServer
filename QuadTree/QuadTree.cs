@@ -62,6 +62,21 @@ namespace System.Activities.Presentation.View
         {
             return Vector2.DistanceSquared(Position, circle.Position) < (Radius + circle.Radius) * (Radius + circle.Radius);
         }
+
+        public int Hash()
+        {
+            return HashCode.Combine(
+                RoundTo3Digits(Position.X),
+                RoundTo3Digits(Position.Y),
+                RoundTo3Digits(Radius)
+            );
+        }
+
+        private static int RoundTo3Digits(float value)
+        {
+            // 转换为 double 防止精度丢失，再四舍五入到3位小数
+            return (int)(Math.Round((double)value, 3, MidpointRounding.AwayFromZero) * 1_000);
+        }
     }
 
     public struct Rect

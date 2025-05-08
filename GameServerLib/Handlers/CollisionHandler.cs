@@ -16,6 +16,7 @@ namespace LeagueSandbox.GameServer.Handlers
         private MapScriptHandler _map;
         private readonly List<GameObject> _objects = new List<GameObject>();
         private QuadTree<GameObject> _quadDynamic;
+        private Dictionary<int, List<GameObject>> cache = new Dictionary<int, List<GameObject>>();
 
         public CollisionHandler(MapScriptHandler map)
         {
@@ -105,14 +106,19 @@ namespace LeagueSandbox.GameServer.Handlers
         /// <returns>List of GameObjects.</returns>
         public List<GameObject> GetNearestObjects(Circle circle)
         {
-            var nearest = new List<GameObject>();
-
-            foreach (var obj in _quadDynamic.GetNodesInside(circle))
+            int hash = circle.Hash();
+            if (!cache.ContainsKey(hash))
             {
-                nearest.Add(obj);
-            }
+                var nearest = new List<GameObject>();
 
-            return nearest;
+                foreach (var obj in _quadDynamic.GetNodesInside(circle))
+                {
+                    nearest.Add(obj);
+                }
+
+                cache[hash] = nearest;
+            }
+            return cache[hash];
         }
 
         /// <summary>
@@ -161,6 +167,7 @@ namespace LeagueSandbox.GameServer.Handlers
         private void UpdateQuadTree()
         {
             _quadDynamic.Clear();
+            cache.Clear();
             foreach (var obj in _objects)
             {
                 if (IsCollisionObject(obj))

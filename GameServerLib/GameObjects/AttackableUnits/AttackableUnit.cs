@@ -98,6 +98,8 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         public bool PathHasTrueEnd { get; private set; } = false;
         public Vector2 PathTrueEnd { get; private set; }
 
+        private long lastGetPath;
+
         /// <summary>
         /// Status effects enabled on this unit. Refer to StatusFlags enum.
         /// </summary>
@@ -292,7 +294,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
 
                 // only time we would collide with terrain is if we are inside of it, so we should teleport out of it.
                 Vector2 exit = _game.Map.NavigationGrid.GetClosestTerrainExit(Position, PathfindingRadius);
-                SetPosition(exit, false);
+                SetPosition(exit, true);
             }
             else
             {
@@ -329,7 +331,14 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     }
                     if (o == null && _game.Map.PathingHandler.IsWalkable(cur, PathfindingRadius))
                     {
-                        SetPosition(cur, true);
+                        long now = DateTime.Now.Ticks / 10000;
+                        if (now - lastGetPath > 3 * 1000)
+                        {
+                            lastGetPath = now;
+                            SetPosition(cur, true);
+                        }
+                        else
+                            SetPosition(cur, false);
                         break;
                     }
                 }
@@ -943,7 +952,6 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
         /// TODO: Implement interpolation (assuming all other desync related issues are already fixed).
         public virtual bool Move(float delta)
         {
-            bool flag = false;
             float speed = GetMoveSpeed() * 0.001f;
             var maxDist = speed * delta;
             if (CurrentWaypointKey < Waypoints.Count)
@@ -956,8 +964,7 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                     if (maxDist < dist)
                     {
                         Position += dir / dist * maxDist;
-                        flag = true;
-                        break;
+                        return true;
                     }
                     else
                     {
@@ -967,45 +974,12 @@ namespace LeagueSandbox.GameServer.GameObjects.AttackableUnits
                         CurrentWaypointKey++;
                         if (CurrentWaypointKey == Waypoints.Count || maxDist == 0)
                         {
-                            flag = true;
-                            break;
+                            return true;
                         }
                     }
                 }
             }
-
-            if (flag)
-            {
-                double angle = 0;
-                bool isFirst = true;
-                for (float r = 0; ; r ++, isFirst = false)
-                {
-                    Vector2 cur;
-                    cur.X = r * (float)Math.Cos(angle) + Position.X;
-                    cur.Y = r * (float)Math.Sin(angle) + Position.Y;
-                    angle += Math.PI / 4;
-
-                    List<GameObject> list = _game.Map.CollisionHandler.GetNearestObjects(new Circle(cur, CollisionRadius));
-                    GameObject collider = null;
-                    foreach (var obj in list)
-                    {
-                        if (obj == this)
-                            continue;
-                        if (_game.Map.CollisionHandler.IsCollisionAffected(obj) || obj is BaseTurret)
-                        {
-                            collider = obj;
-                            break;
-                        }
-                    }
-                    if (collider == null && _game.Map.PathingHandler.IsWalkable(cur, PathfindingRadius))
-                    {
-                        if (!isFirst)
-                            SetPosition(cur, true);
-                        break;
-                    }
-                }
-            }
-            return flag;
+            return false;
         }
 
         public bool PathTrueEndIs(Vector2 location)

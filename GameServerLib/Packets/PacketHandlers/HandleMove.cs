@@ -49,15 +49,15 @@ namespace LeagueSandbox.GameServer.Packets.PacketHandlers
                         waypoints = req.Waypoints.ConvertAll(TranslateFromCenteredCoordinates);
                         //TODO: Find the nearest point on the path and discard everything before it
                         waypoints[0] = champion.Position;
-                        for(int i = 0; i < waypoints.Count - 1; i++)
+                        for (int i = 0; i < waypoints.Count - 1; i++)
                         {
-                            if(nav.CastCircle(waypoints[i], waypoints[i + 1], champion.PathfindingRadius, true))
+                            if (nav.CastCircle(waypoints[i], waypoints[i + 1], champion.PathfindingRadius, true))
                             {
                                 var ithWaypoint = waypoints[i];
                                 var lastWaypoint = waypoints[waypoints.Count - 1];
-                                var path = nav.GetPath(champion, ithWaypoint, lastWaypoint, champion.PathfindingRadius);
+                                var path = _game.Map.PathingHandler.GetPath(champion, ithWaypoint, lastWaypoint, true);
                                 waypoints.RemoveRange(i, waypoints.Count - i);
-                                if(path != null)
+                                if (path != null)
                                 {
                                     waypoints.AddRange(path);
                                 }

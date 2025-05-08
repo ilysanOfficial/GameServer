@@ -1091,9 +1091,9 @@ namespace LeagueSandbox.GameServer.API
         /// <param name="to"></param>
         /// <param name="distanceThreshold"></param>
         /// <returns></returns>
-        public static List<Vector2> GetPath(Vector2 from, Vector2 to, float distanceThreshold = 0)
+        public static List<Vector2> GetPath(GameObject obj, Vector2 from, Vector2 to, bool usePathingRadius)
         {
-            return _game.Map.PathingHandler.GetPath(from, to, distanceThreshold);
+            return _game.Map.PathingHandler.GetPath(obj, from, to, usePathingRadius);
         }
 
         public static void OverrideUnitAttackSpeedCap(AttackableUnit unit, bool doOverrideMax, float maxAttackSpeedOverride, bool doOverrideMin, float minAttackSpeedOverride)

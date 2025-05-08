@@ -325,7 +325,7 @@ namespace AIScripts
                     if(!followsWaypoints)
                     {
                         followsWaypoints = true;
-                        path = GetPath(LaneMinion.Position, currentWaypoint, LaneMinion.PathfindingRadius);
+                        path = GetPath(LaneMinion, LaneMinion.Position, currentWaypoint, true);
                     }
 
                     if(path == null)

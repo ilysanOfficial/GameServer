@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using LeagueSandbox.GameServer.GameObjects;
 using LeagueSandbox.GameServer.GameObjects.AttackableUnits;
 using LeagueSandbox.GameServer.Logging;
 using log4net;
@@ -122,7 +123,7 @@ namespace LeagueSandbox.GameServer.Handlers
         /// <summary>
         /// Returns a path to the given target position from the given unit's position.
         /// </summary>
-        public List<Vector2> GetPath(AttackableUnit obj, Vector2 target, bool usePathingRadius = true)
+        public List<Vector2> GetPath(GameObject obj, Vector2 target, bool usePathingRadius = true)
         {
             return GetPath(obj, obj.Position, target, usePathingRadius);
         }
@@ -138,7 +139,7 @@ namespace LeagueSandbox.GameServer.Handlers
         /// <summary>
         /// Returns a path to the given target position from the given unit's position.
         /// </summary>
-        public List<Vector2> GetPath(AttackableUnit obj, Vector2 start, Vector2 target, bool usePathingRadius = true)
+        public List<Vector2> GetPath(GameObject obj, Vector2 start, Vector2 target, bool usePathingRadius = true)
         {
             var watch = new Stopwatch();
             if (usePathingRadius)
